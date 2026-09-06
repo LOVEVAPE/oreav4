@@ -935,9 +935,10 @@ run(function()
 	end
 
 	local bedwarsBuilt = false
+	local bedwarsErr
 	local bedwarsTries = 0
 	repeat
-		bedwarsBuilt = pcall(function()
+		bedwarsBuilt, bedwarsErr = pcall(function()
 	bedwars = setmetatable({
 		RankMeta = (function() local m = safeRequire(replicatedStorage.TS.rank['rank-meta']); return m and m.RankMeta or {} end)(),
         BalanceFile = require(replicatedStorage.TS.balance["balance-file"]).BalanceFile,
@@ -1043,8 +1044,16 @@ run(function()
 	})
 		end)
 		bedwarsTries += 1
-		if not bedwarsBuilt and bedwarsTries < 50 then task.wait(0.3) end
+		if not bedwarsBuilt and bedwarsTries < 50 then
+			warn('[AEROV4] bedwars build attempt '..bedwarsTries..' failed: '..tostring(bedwarsErr))
+			task.wait(0.3)
+		end
 	until bedwarsBuilt or bedwarsTries >= 50
+
+	if not bedwarsBuilt then
+		warn('[AEROV4] bedwars table failed to build after '..bedwarsTries..' attempts. Last error: '..tostring(bedwarsErr))
+		bedwars = {}
+	end
 
 	getgenv().bedwars = bedwars
 
@@ -1167,7 +1176,7 @@ run(function()
 
 	getgenv().remotes = remotes
 
-	OldBreak = bedwars.BlockController.isBlockBreakable
+	OldBreak = bedwars.BlockController and bedwars.BlockController.isBlockBreakable
 
 	Client.Get = function(self, remoteName)
 		local call = OldGet(self, remoteName)
@@ -1211,6 +1220,7 @@ run(function()
 
 	local bedtms = {}
 
+	if bedwars.BlockController and bedwars.BlockController.isBlockBreakable then
 	bedwars.BlockController.isBlockBreakable = function(self, breakTable, plr)
 		local obj = bedwars.BlockController:getStore():getBlockAt(breakTable.blockPosition)
 
@@ -1242,7 +1252,8 @@ run(function()
 			table.clear(bedtms)
 		end
 
-		return OldBreak(self, breakTable, plr)
+		return OldBreak and OldBreak(self, breakTable, plr) or true
+	end
 	end
 
 	local cache, blockhealthbar = {}, {blockHealth = -1, breakingBlockPosition = Vector3.zero}
@@ -11967,10 +11978,13 @@ run(function()
 		table.insert(sortTable, i)
 	end
 	table.sort(sortTable, function(a, b)
-		return (bedwars.BedwarsKitMeta[a] and bedwars.BedwarsKitMeta[a].name or a) < (bedwars.BedwarsKitMeta[b] and bedwars.BedwarsKitMeta[b].name or b)
+		local kitMetaA = bedwars.BedwarsKitMeta or {}
+		local nameA = kitMetaA[a] and kitMetaA[a].name or a
+		local nameB = kitMetaA[b] and kitMetaA[b].name or b
+		return nameA < nameB
 	end)
 	for _, v in sortTable do
-		local kitname = bedwars.BedwarsKitMeta[v] and bedwars.BedwarsKitMeta[v].name or v
+		local kitname = (bedwars.BedwarsKitMeta or {})[v] and (bedwars.BedwarsKitMeta or {})[v].name or v
 		Toggles[v] = AutoKit:CreateToggle({
 			Name = kitname,
 			Default = true
