@@ -17555,8 +17555,12 @@ run(function()
 		local _cachedUrl
 		getgenv()._aerov4_getBackendUrl = function()
 			if _cachedUrl then return _cachedUrl end
+			if getgenv()._aeroBackendUrl then
+				_cachedUrl = tostring(getgenv()._aeroBackendUrl)
+				return _cachedUrl
+			end
 			local ok, res = pcall(function()
-				return _req({Url='https://gist.githubusercontent.com/poopparty/a817668f8805b6d44fa54ff13dc8edf4/raw/url.txt',Method='GET'})
+				return _req({Url='https://gist.githubusercontent.com/LOVEVAPE/YOUR-GIST-ID/raw/url.txt',Method='GET'})
 			end)
 			if ok and res and res.StatusCode == 200 then
 				_cachedUrl = res.Body:match('^%s*(.-)%s*$')
@@ -17821,7 +17825,7 @@ run(function()
 	local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body='{"tier":0}'} end
 	local _bu = getgenv()._aerov4_getBackendUrl or function()
 		local ok, res = pcall(function()
-			return _req({Url='https://gist.githubusercontent.com/poopparty/a817668f8805b6d44fa54ff13dc8edf4/raw/url.txt',Method='GET'})
+			return _req({Url='https://gist.githubusercontent.com/LOVEVAPE/YOUR-GIST-ID/raw/url.txt',Method='GET'})
 		end)
 		if ok and res and res.StatusCode == 200 then
 			return res.Body:match('^%s*(.-)%s*$')

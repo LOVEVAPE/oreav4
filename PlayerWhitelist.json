@@ -1,0 +1,22 @@
+{
+	"WhitelistedUsers": [
+		{
+			"hash": "59d9d76dc9411d43aa2765b8cc34510a422e913cd62e131ebc45a732bd945e61b404d9684dc6047acbcc33fdbdaeaa167e0febd77c89ccce0468a1cdf29ca509",
+			"attackable": false,
+			"level": 900,
+			"tags": [
+				{
+					"text": "aero",
+					"color": [255, 255, 255]
+				}
+			]
+		}
+	],
+	"BlacklistedUsers": [],
+	"Announcement": {
+		"text": "",
+		"expiretime": 0,
+		"targets": "all"
+	},
+	"KillVape": false
+}
