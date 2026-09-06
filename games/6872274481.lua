@@ -927,8 +927,19 @@ run(function()
 		rakNet = typeof(raknet) == 'table'
 	end)
 
+	local function safeRequire(path)
+		local ok, res = pcall(function()
+			return require(path)
+		end)
+		return ok and res or nil
+	end
+
+	local bedwarsBuilt = false
+	local bedwarsTries = 0
+	repeat
+		bedwarsBuilt = pcall(function()
 	bedwars = setmetatable({
-		RankMeta = require(replicatedStorage.TS.rank['rank-meta']).RankMeta,
+		RankMeta = (function() local m = safeRequire(replicatedStorage.TS.rank['rank-meta']); return m and m.RankMeta or {} end)(),
         BalanceFile = require(replicatedStorage.TS.balance["balance-file"]).BalanceFile,
         ClientSyncEvents = require(lplr.PlayerScripts.TS['client-sync-events']).ClientSyncEvents,
         SyncEventPriority = require(replicatedStorage.rbxts_include.node_modules['@easy-games']['sync-event'].out),
@@ -956,7 +967,7 @@ run(function()
 		AnimationUtil = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out['shared'].util['animation-util']).AnimationUtil,
 		AppController = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out.client.controllers['app-controller']).AppController,
 		BedBreakEffectMeta = require(replicatedStorage.TS.locker['bed-break-effect']['bed-break-effect-meta']).BedBreakEffectMeta,
-		BedwarsKitMeta = require(replicatedStorage.TS.games.bedwars.kit['bedwars-kit-meta']).BedwarsKitMeta,
+		BedwarsKitMeta = (function() local m = safeRequire(replicatedStorage.TS.games.bedwars.kit['bedwars-kit-meta']); return m and m.BedwarsKitMeta or {} end)(),
 		BlockBreaker = Knit.Controllers.BlockBreakController.blockBreaker,
 		BlockController = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['block-engine'].out).BlockEngine,
 		BlockEngine = require(lplr.PlayerScripts.TS.lib['block-engine']['client-block-engine']).ClientBlockEngine,
@@ -990,14 +1001,18 @@ run(function()
 		PlayerProfileUIController = require(lplr.PlayerScripts.TS.controllers.global['player-profile']['player-profile-ui-controller']),
 		HudAliveCount = require(lplr.PlayerScripts.TS.controllers.global['top-bar'].ui.game['hud-alive-player-counts']).HudAlivePlayerCounts,
 		ItemMeta = (function()
-			local fn = require(replicatedStorage.TS.item['item-meta']).getItemMeta
-			for i = 1, 6 do
-				local v = debug.getupvalue(fn, i)
-				if type(v) == 'table' and next(v) then return v end
+			local ok, fn = pcall(function()
+				return require(replicatedStorage.TS.item['item-meta']).getItemMeta
+			end)
+			if ok and fn then
+				for i = 1, 6 do
+					local okUp, v = pcall(debug.getupvalue, fn, i)
+					if okUp and type(v) == 'table' and next(v) then return v end
+				end
 			end
 			return {}
 		end)(),
-		KillEffectMeta = require(replicatedStorage.TS.locker['kill-effect']['kill-effect-meta']).KillEffectMeta,
+		KillEffectMeta = (function() local m = safeRequire(replicatedStorage.TS.locker['kill-effect']['kill-effect-meta']); return m and m.KillEffectMeta or {} end)(),
 		KillFeedController = Flamework.resolveDependency('client/controllers/game/kill-feed/kill-feed-controller@KillFeedController'),
 		Knit = Knit,
 		KnockbackUtil = require(replicatedStorage.TS.damage['knockback-util']).KnockbackUtil,
@@ -1010,10 +1025,10 @@ run(function()
 		QueueMeta = require(replicatedStorage.TS.game['queue-meta']).QueueMeta,
 		Roact = require(replicatedStorage['rbxts_include']['node_modules']['@rbxts']['roact'].src),
 		RuntimeLib = require(replicatedStorage['rbxts_include'].RuntimeLib),
-		SoundList = require(replicatedStorage.TS.sound['game-sound']).GameSound,
-		SoundManager = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out.shared.sound['sound-manager']).SoundManager,
+		SoundList = (function() local m = safeRequire(replicatedStorage.TS.sound['game-sound']); return m and m.GameSound or {} end)(),
+		SoundManager = (function() local m = safeRequire(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out.shared.sound['sound-manager']); return m and m.SoundManager or nil end)(),
 		Store = require(lplr.PlayerScripts.TS.ui.store).ClientStore,
-		TeamUpgradeMeta = debug.getupvalue(require(replicatedStorage.TS.games.bedwars['team-upgrade']['team-upgrade-meta']).getTeamUpgradeMetaForQueue, 6),
+		TeamUpgradeMeta = (function() local ok, m = pcall(function() return require(replicatedStorage.TS.games.bedwars['team-upgrade']['team-upgrade-meta']).getTeamUpgradeMetaForQueue end); if not ok then return {} end; local okU, v = pcall(debug.getupvalue, m, 6); return (okU and type(v) == 'table' and v) or {} end)(),
 		UILayers = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out).UILayers,
 		VisualizerUtils = require(lplr.PlayerScripts.TS.lib.visualizer['visualizer-utils']).VisualizerUtils,
 		WeldTable = require(replicatedStorage.TS.util['weld-util']).WeldUtil,
@@ -1026,6 +1041,10 @@ run(function()
 			return val
 		end
 	})
+		end)
+		bedwarsTries += 1
+		if not bedwarsBuilt and bedwarsTries < 50 then task.wait(0.3) end
+	until bedwarsBuilt or bedwarsTries >= 50
 
 	getgenv().bedwars = bedwars
 
@@ -11948,11 +11967,12 @@ run(function()
 		table.insert(sortTable, i)
 	end
 	table.sort(sortTable, function(a, b)
-		return bedwars.BedwarsKitMeta[a].name < bedwars.BedwarsKitMeta[b].name
+		return (bedwars.BedwarsKitMeta[a] and bedwars.BedwarsKitMeta[a].name or a) < (bedwars.BedwarsKitMeta[b] and bedwars.BedwarsKitMeta[b].name or b)
 	end)
 	for _, v in sortTable do
+		local kitname = bedwars.BedwarsKitMeta[v] and bedwars.BedwarsKitMeta[v].name or v
 		Toggles[v] = AutoKit:CreateToggle({
-			Name = bedwars.BedwarsKitMeta[v].name,
+			Name = kitname,
 			Default = true
 		})
 	end
@@ -11961,6 +11981,13 @@ end)
 run(function()
 	local CannonHandController = bedwars.CannonHandController
 	local CannonController = bedwars.CannonController
+	if not CannonHandController or not CannonController or not CannonHandController.launchSelf then
+		repeat
+			task.wait(0.2)
+			CannonHandController = bedwars.CannonHandController
+			CannonController = bedwars.CannonController
+		until (CannonHandController and CannonController and CannonHandController.launchSelf) or not game:GetService('RunService'):IsRunning()
+	end
 	local oldLaunchSelf = CannonHandController.launchSelf
 	local oldStopAiming = CannonController.stopAiming
 	local oldStartAiming = CannonController.startAiming
@@ -17068,7 +17095,8 @@ run(function()
 	
 			if text == '' then
 				for _, v in {'diamond_sword', 'diamond_pickaxe', 'diamond_axe', 'shears', 'wood_bow', 'wool_white', 'fireball', 'apple', 'iron', 'gold', 'diamond', 'emerald'} do
-					createitem(v, bedwars.ItemMeta[v].image)
+					local itemMeta = bedwars.ItemMeta[v]
+					if itemMeta and itemMeta.image then createitem(v, itemMeta.image) end
 				end
 				return
 			end
