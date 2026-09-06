@@ -927,10 +927,10 @@ run(function()
 		rakNet = typeof(raknet) == 'table'
 	end)
 
-	local function safeRequire(path)
-		local ok, res = pcall(function()
-			return require(path)
-		end)
+	local function safeRequire(pathFn)
+		local okPath, path = pcall(pathFn)
+		if not okPath then return nil end
+		local ok, res = pcall(require, path)
 		return ok and res or nil
 	end
 
@@ -940,7 +940,7 @@ run(function()
 	repeat
 		bedwarsBuilt, bedwarsErr = pcall(function()
 	bedwars = setmetatable({
-		RankMeta = (function() local m = safeRequire(replicatedStorage.TS.rank['rank-meta']); return m and m.RankMeta or {} end)(),
+		RankMeta = (function() local m = safeRequire(function() return replicatedStorage.TS.rank['rank-meta'] end); return m and m.RankMeta or {} end)(),
         BalanceFile = require(replicatedStorage.TS.balance["balance-file"]).BalanceFile,
         ClientSyncEvents = require(lplr.PlayerScripts.TS['client-sync-events']).ClientSyncEvents,
         SyncEventPriority = require(replicatedStorage.rbxts_include.node_modules['@easy-games']['sync-event'].out),
@@ -968,7 +968,7 @@ run(function()
 		AnimationUtil = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out['shared'].util['animation-util']).AnimationUtil,
 		AppController = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out.client.controllers['app-controller']).AppController,
 		BedBreakEffectMeta = require(replicatedStorage.TS.locker['bed-break-effect']['bed-break-effect-meta']).BedBreakEffectMeta,
-		BedwarsKitMeta = (function() local m = safeRequire(replicatedStorage.TS.games.bedwars.kit['bedwars-kit-meta']); return m and m.BedwarsKitMeta or {} end)(),
+		BedwarsKitMeta = (function() local m = safeRequire(function() return replicatedStorage.TS.games.bedwars.kit['bedwars-kit-meta'] end); return m and m.BedwarsKitMeta or {} end)(),
 		BlockBreaker = Knit.Controllers.BlockBreakController.blockBreaker,
 		BlockController = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['block-engine'].out).BlockEngine,
 		BlockEngine = require(lplr.PlayerScripts.TS.lib['block-engine']['client-block-engine']).ClientBlockEngine,
@@ -1013,7 +1013,7 @@ run(function()
 			end
 			return {}
 		end)(),
-		KillEffectMeta = (function() local m = safeRequire(replicatedStorage.TS.locker['kill-effect']['kill-effect-meta']); return m and m.KillEffectMeta or {} end)(),
+		KillEffectMeta = (function() local m = safeRequire(function() return replicatedStorage.TS.locker['kill-effect']['kill-effect-meta'] end); return m and m.KillEffectMeta or {} end)(),
 		KillFeedController = Flamework.resolveDependency('client/controllers/game/kill-feed/kill-feed-controller@KillFeedController'),
 		Knit = Knit,
 		KnockbackUtil = require(replicatedStorage.TS.damage['knockback-util']).KnockbackUtil,
@@ -1026,8 +1026,8 @@ run(function()
 		QueueMeta = require(replicatedStorage.TS.game['queue-meta']).QueueMeta,
 		Roact = require(replicatedStorage['rbxts_include']['node_modules']['@rbxts']['roact'].src),
 		RuntimeLib = require(replicatedStorage['rbxts_include'].RuntimeLib),
-		SoundList = (function() local m = safeRequire(replicatedStorage.TS.sound['game-sound']); return m and m.GameSound or {} end)(),
-		SoundManager = (function() local m = safeRequire(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out.shared.sound['sound-manager']); return m and m.SoundManager or nil end)(),
+		SoundList = (function() local m = safeRequire(function() return replicatedStorage.TS.sound['game-sound'] end); return m and m.GameSound or {} end)(),
+		SoundManager = (function() local m = safeRequire(function() return replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out.shared.sound['sound-manager'] end); if m and m.SoundManager then return m.SoundManager end; return {playSound = function() end} end)(),
 		Store = require(lplr.PlayerScripts.TS.ui.store).ClientStore,
 		TeamUpgradeMeta = (function() local ok, m = pcall(function() return require(replicatedStorage.TS.games.bedwars['team-upgrade']['team-upgrade-meta']).getTeamUpgradeMetaForQueue end); if not ok then return {} end; local okU, v = pcall(debug.getupvalue, m, 6); return (okU and type(v) == 'table' and v) or {} end)(),
 		UILayers = require(replicatedStorage['rbxts_include']['node_modules']['@easy-games']['game-core'].out).UILayers,
@@ -1044,11 +1044,11 @@ run(function()
 	})
 		end)
 		bedwarsTries += 1
-		if not bedwarsBuilt and bedwarsTries < 50 then
+		if not bedwarsBuilt and bedwarsTries < 20 then
 			warn('[AEROV4] bedwars build attempt '..bedwarsTries..' failed: '..tostring(bedwarsErr))
 			task.wait(0.3)
 		end
-	until bedwarsBuilt or bedwarsTries >= 50
+	until bedwarsBuilt or bedwarsTries >= 20
 
 	if not bedwarsBuilt then
 		warn('[AEROV4] bedwars table failed to build after '..bedwarsTries..' attempts. Last error: '..tostring(bedwarsErr))
