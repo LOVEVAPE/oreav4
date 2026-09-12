@@ -72,7 +72,7 @@ local function downloadFile(path, func)
 		local success = false
 		for attempt = 1, 3 do
 			local suc, result = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/LOVEVAPE/oreav4/' .. readfile('newvape/profiles/commit.txt') .. '/' .. select(1, path:gsub('newvape/', '')), true)
+				return game:HttpGet('https://raw.githubusercontent.com/LOVEVAPE/oreav4/' .. readfile('10abcdV4/profiles/commit.txt') .. '/' .. select(1, path:gsub('10abcdV4/', '')), true)
 			end)
 			if suc and result ~= '404: Not Found' then
 				res = result
@@ -93,18 +93,18 @@ local function downloadFile(path, func)
 end
 
 local function migrateProfiles()
-	if isfile('newvape/profiles/migrated_placeid.txt') then return end
+	if isfile('10abcdV4/profiles/migrated_placeid.txt') then return end
 
     local oldId = tostring(game.GameId)
     local newId = tostring(game.PlaceId)
 
 	if oldId == newId then
-		pcall(writefile, 'newvape/profiles/migrated_placeid.txt', 'done')
+		pcall(writefile, '10abcdV4/profiles/migrated_placeid.txt', 'done')
 		return
 	end
 
 	local suffix = oldId .. '.txt'
-	for _, path in ipairs(listfiles('newvape/profiles')) do
+	for _, path in ipairs(listfiles('10abcdV4/profiles')) do
 		local name = path:gsub('\\', '/')
 		if name:sub(-#suffix) == suffix then
 			local newPath = name:sub(1, -#suffix - 1) .. newId .. '.txt'
@@ -114,8 +114,8 @@ local function migrateProfiles()
 		end
 	end
 
-	if isfolder('newvape/profiles/premade') then
-		for _, path in ipairs(listfiles('newvape/profiles/premade')) do
+	if isfolder('10abcdV4/profiles/premade') then
+		for _, path in ipairs(listfiles('10abcdV4/profiles/premade')) do
 			local name = path:gsub('\\', '/')
 			if name:sub(-#suffix) == suffix then
 				local newPath = name:sub(1, -#suffix - 1) .. newId .. '.txt'
@@ -126,7 +126,7 @@ local function migrateProfiles()
 		end
 	end
 
-	pcall(writefile, 'newvape/profiles/migrated_placeid.txt', 'done')
+	pcall(writefile, '10abcdV4/profiles/migrated_placeid.txt', 'done')
 end
 
 pcall(migrateProfiles)
@@ -150,7 +150,7 @@ local function finishLoading()
 		if (not teleportedServers) and (not shared.VapeIndependent) then
 			teleportedServers = true
 			local teleportScript = [[
-				loadstring(game:HttpGet('https://raw.githubusercontent.com/LOVEVAPE/oreav4/'..readfile('newvape/profiles/commit.txt')..'/loader.lua', true), 'loader')()
+				loadstring(game:HttpGet('https://raw.githubusercontent.com/LOVEVAPE/oreav4/'..readfile('10abcdV4/profiles/commit.txt')..'/loader.lua', true), 'loader')()
 			]]
 			if shared.VapeDeveloper then
 				teleportScript = 'shared.VapeDeveloper = true\n' .. teleportScript
@@ -194,16 +194,16 @@ local function finishLoading()
 	end
 end
 
-if not isfile('newvape/profiles/gui.txt') then
-	writefile('newvape/profiles/gui.txt', 'new')
+if not isfile('10abcdV4/profiles/gui.txt') then
+	writefile('10abcdV4/profiles/gui.txt', 'new')
 end
-local gui = readfile('newvape/profiles/gui.txt')
+local gui = readfile('10abcdV4/profiles/gui.txt')
 
-if not isfolder('newvape/assets/' .. gui) then
-	makefolder('newvape/assets/' .. gui)
+if not isfolder('10abcdV4/assets/' .. gui) then
+	makefolder('10abcdV4/assets/' .. gui)
 end
 
-local guiSource = downloadFile('newvape/guis/' .. gui .. '.lua')
+local guiSource = downloadFile('10abcdV4/guis/' .. gui .. '.lua')
 local guiFunc, guiErr = _realLoadstring(guiSource, 'gui')
 if not guiFunc then
 	local errMsg = tostring(guiErr)
@@ -225,10 +225,10 @@ if not guiFunc then
 end
 vape = guiFunc()
 if not vape then
-	error('[AEROV4] GUI returned nil file may be corrupted try deleting newvape/guis/' .. gui .. '.lua and reinjecting.')
+	error('[AEROV4] GUI returned nil file may be corrupted try deleting 10abcdV4/guis/' .. gui .. '.lua and reinjecting.')
 end
 if not vape.Load then
-	if delfile then pcall(function() delfile('newvape/guis/' .. gui .. '.lua') end) end
+	if delfile then pcall(function() delfile('10abcdV4/guis/' .. gui .. '.lua') end) end
 	error('[AEROV4] gui file corrupted (missing load) reinject..')
 end
 if not vape.Init and not vape.Load then
@@ -645,17 +645,17 @@ if getgenv().Closet then
 end
 
 if not shared.VapeIndependent then
-	_realLoadstring(downloadFile('newvape/games/universal.lua'), 'universal')()
+	_realLoadstring(downloadFile('10abcdV4/games/universal.lua'), 'universal')()
 	local gameFileId = (game.GameId == 2619619496) and (game.PlaceId == 6872265039 and 6872265039 or 6872274481) or game.PlaceId
-	if isfile('newvape/games/' .. gameFileId .. '.lua') then
-		_realLoadstring(downloadFile('newvape/games/' .. gameFileId .. '.lua'), tostring(gameFileId))(...)
+	if isfile('10abcdV4/games/' .. gameFileId .. '.lua') then
+		_realLoadstring(downloadFile('10abcdV4/games/' .. gameFileId .. '.lua'), tostring(gameFileId))(...)
 	else
 		if not shared.VapeDeveloper then
 			local suc, res = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/LOVEVAPE/oreav4/' .. readfile('newvape/profiles/commit.txt') .. '/games/' .. gameFileId .. '.lua', true)
+				return game:HttpGet('https://raw.githubusercontent.com/LOVEVAPE/oreav4/' .. readfile('10abcdV4/profiles/commit.txt') .. '/games/' .. gameFileId .. '.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
-				_realLoadstring(downloadFile('newvape/games/' .. gameFileId .. '.lua'), tostring(gameFileId))(...)
+				_realLoadstring(downloadFile('10abcdV4/games/' .. gameFileId .. '.lua'), tostring(gameFileId))(...)
 			end
 		end
 	end

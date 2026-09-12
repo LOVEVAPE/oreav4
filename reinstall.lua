@@ -1,4 +1,4 @@
-local folderToClean = "newvape"
+local folderToClean = "10abcdV4"
 local folderToKeep = "profiles"
 local reinstallUrl = "https://raw.githubusercontent.com/LOVEVAPE/oreav4/main/NewMainScript.lua"
 
