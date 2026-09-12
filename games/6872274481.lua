@@ -355,10 +355,10 @@ local function getShieldAttribute(char)
 end
 
 local function getSpeed()
-	local multi, increase, modifiers = 0, true, bedwars.SprintController:getMovementStatusModifier():getModifiers()
+	local modifier = bedwars.SprintController:getMovementStatusModifier():getModifiers()
+	local multi, increase = 0, true
 
-	local modifiers2 = bedwars.SprintController:getMovementStatusModifier():getModifiers()
-	for v in modifiers do
+	for v in modifier do
 		local val = v.constantSpeedMultiplier and v.constantSpeedMultiplier or 0
 		if val and val > math.max(multi, 1) then
 			increase = false
@@ -366,7 +366,7 @@ local function getSpeed()
 		end
 	end
 
-	for v in modifiers2 do
+	for v in modifier do
 		multi += math.max((v.moveSpeedMultiplier or 0) - 1, 0)
 	end
 
@@ -512,6 +512,9 @@ local kitorder = {
 	regent = 1
 }
 
+local _FLAT = Vector3.new(1, 0, 1)
+local _getServerTime = function() return workspace:GetServerTimeNow() end
+
 local function HasSeed(character)
     if not character then return false end
     return character:FindFirstChild("Seed", true) ~= nil
@@ -538,9 +541,9 @@ local sortmethods = {
 		if not a.Entity or not a.Entity.RootPart then return false end
 		if not b.Entity or not b.Entity.RootPart then return true end
 		local selfrootpos = entitylib.character.RootPart.Position
-		local localFacing = (ViewMode.Value == 'Third Person' and gameCamera.CFrame.LookVector or entitylib.character.RootPart.CFrame.LookVector) * Vector3.new(1, 0, 1)
-		local angle = math.acos(localfacing:Dot(((a.Entity.RootPart.Position - selfrootpos) * Vector3.new(1, 0, 1)).Unit))
-		local angle2 = math.acos(localfacing:Dot(((b.Entity.RootPart.Position - selfrootpos) * Vector3.new(1, 0, 1)).Unit))
+		local localFacing = (ViewMode.Value == 'Third Person' and gameCamera.CFrame.LookVector or entitylib.character.RootPart.CFrame.LookVector) * _FLAT
+		local angle = math.acos(localfacing:Dot(((a.Entity.RootPart.Position - selfrootpos) * _FLAT).Unit))
+		local angle2 = math.acos(localfacing:Dot(((b.Entity.RootPart.Position - selfrootpos) * _FLAT).Unit))
 		return angle < angle2
 	end,
 	Distance = function(a, b)
@@ -1375,7 +1378,7 @@ run(function()
 			local dblock, dpos = getPlacedBlock(pos)
 			if not dblock then return end
 
-			if not nobreak and (workspace:GetServerTimeNow() - bedwars.SwordController.lastAttack) > 0.2 then
+			if not nobreak and (_getServerTime() - bedwars.SwordController.lastAttack) > 0.2 then
 				local breaktype = bedwars.ItemMeta[dblock.Name].block.breakType
 				local tool = store.tools[breaktype]
 				if tool then
@@ -2289,8 +2292,8 @@ local AimAssist
 		if not ent or not ent.RootPart then return false end
 		if not entitylib.character or not entitylib.character.RootPart then return false end
 		local delta = (ent.RootPart.Position - entitylib.character.RootPart.Position)
-		local localFacing = (ViewMode.Value == 'Third Person' and gameCamera.CFrame.LookVector or entitylib.character.RootPart.CFrame.LookVector) * Vector3.new(1, 0, 1)
-		local flatDelta = delta * Vector3.new(1, 0, 1)
+		local localFacing = (ViewMode.Value == 'Third Person' and gameCamera.CFrame.LookVector or entitylib.character.RootPart.CFrame.LookVector) * _FLAT
+		local flatDelta = delta * _FLAT
 		if flatDelta.Magnitude <= 0.001 then return false end
 		local angle = math.acos(math.clamp(localFacing:Dot(flatDelta.Unit), -1, 1))
 		return angle < math.rad(AngleSlider.Value / 2)
@@ -2322,7 +2325,7 @@ local AimAssist
 
 					if ClickAim and ClickAim.Enabled then
 						local sc = bedwars.SwordController
-						if not sc or not sc.lastAttack or (workspace:GetServerTimeNow() - sc.lastAttack) >= 0.4 then
+						if not sc or not sc.lastAttack or (_getServerTime() - sc.lastAttack) >= 0.4 then
 							return
 						end
 					end
@@ -3375,7 +3378,7 @@ run(function()
 									bedwars.Client:Get(remotes.SummonerClawAttack):SendToServer({
 										position = entitylib.character.RootPart.Position,
 										direction = gameCamera.CFrame.LookVector,
-										clientTime = workspace:GetServerTimeNow()
+										clientTime = _getServerTime()
 									})
 								else
 									t = 0.065
@@ -4851,8 +4854,8 @@ run(function()
     local LegitSwitch
     local SC = bedwars.SwordController
     local _FLAT = Vector3.new(1, 0, 1)
-    local _getServerTime = workspace.GetServerTimeNow
-    local OldShootInterval
+    local _getServerTime = function() return workspace:GetServerTimeNow() end
+    local oldShootInterval
     local OldSwitchDelay
     local OldWaitDelay
     local OldFirstPersonCheck
@@ -6292,7 +6295,7 @@ run(function()
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
 	local _FLAT = Vector3.new(1, 0, 1)
 	local SC = bedwars.SwordController
-	local _getServerTime = workspace.GetServerTimeNow
+	local _getServerTime = function() return workspace:GetServerTimeNow() end
 	local AttackRemote = {FireServer = function() end}
 	task.spawn(function()
 		AttackRemote = bedwars.Client:Get(remotes.AttackEntity).instance
@@ -8818,12 +8821,12 @@ run(function()
 			bedwars.placeBlock(rounded, item.itemType, false)
 		end,
 		wood_dao = function(item, pos, dir)
-			if (lplr.Character:GetAttribute('CanDashNext') or 0) > workspace:GetServerTimeNow() or not bedwars.AbilityController:canUseAbility('dash') then
-				repeat task.wait() until (lplr.Character:GetAttribute('CanDashNext') or 0) < workspace:GetServerTimeNow() and bedwars.AbilityController:canUseAbility('dash') or not LongJump.Enabled
+			if (lplr.Character:GetAttribute('CanDashNext') or 0) > _getServerTime() or not bedwars.AbilityController:canUseAbility('dash') then
+				repeat task.wait() until (lplr.Character:GetAttribute('CanDashNext') or 0) < _getServerTime() and bedwars.AbilityController:canUseAbility('dash') or not LongJump.Enabled
 			end
 	
 			if LongJump.Enabled then
-				bedwars.SwordController.lastAttack = workspace:GetServerTimeNow()
+				bedwars.SwordController.lastAttack = _getServerTime()
 				switchItem(item.tool, 0.1)
 				replicatedStorage['events-@easy-games/game-core:shared/game-core-networking@getEvents.Events'].useAbility:FireServer('dash', {
 					direction = dir,
@@ -9211,7 +9214,7 @@ run(function()
 							if vape.ThreadFix then setthreadidentity(8) end
 							NameTags:Clean(bedwars.Client:OnEvent("HatterUseTeleport", function(p14)
 								if not KitTracker.Enabled then ktLabel.Text = '' return end
-								local dtc = p14.arriveTime - workspace:GetServerTimeNow() + 0.05
+								local dtc = p14.arriveTime - _getServerTime() + 0.05
 								if vape.ThreadFix then setthreadidentity(8) end
 								if p14.hatterPlayer == ent.Player then
 									ktLabel.Text = '【 🎩 】'
@@ -9796,16 +9799,17 @@ run(function()
             local skipPosition = frameCounter % 3 == 0
             local skipVisCheck = frameCounter % 2 ~= 0
             local updateEquipment = frameCounter % 30 == 0
-            local updateKit = frameCounter % 30 == 0
-            local updateDistanceText = frameCounter % 6 == 0
+            local skipUpdateKit = frameCounter % 30 == 0
+            local lplrTier = getAccountTier(lplr)
+            local charRootPos = entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.RootPart.Position
 
             for ent, nametag in Reference do
-                if ent.Player and getAccountTier(ent.Player) >= 4 and getAccountTier(lplr) == 0 then
+                if ent.Player and getAccountTier(ent.Player) >= 4 and lplrTier == 0 then
                     nametag.Visible = false
                     continue
                 end
                 if DistanceCheck.Enabled then
-                    local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math_huge
+                    local distance = charRootPos and (charRootPos - ent.RootPart.Position).Magnitude or math_huge
                     if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
                         nametag.Visible = false
                         continue
@@ -9826,7 +9830,7 @@ run(function()
                 end
 
                 if Distance.Enabled then
-                    local mag = entitylib.isAlive and math_floor((entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude) or 0
+                    local mag = charRootPos and math_floor((charRootPos - ent.RootPart.Position).Magnitude) or 0
                     if Sizes[ent] ~= mag then
                         nametag.Text = string_format(Strings[ent], mag)
                         if updateDistanceText then
@@ -9893,14 +9897,16 @@ run(function()
         Drawing = function()
             frameCounter = frameCounter + 1
             local skipFrame = frameCounter % 2 ~= 0
+            local lplrTier = getAccountTier(lplr)
+            local charRootPos = entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.RootPart.Position
 
             for ent, nametag in Reference do
-                if ent.Player and getAccountTier(ent.Player) >= 4 and getAccountTier(lplr) == 0 then
+                if ent.Player and getAccountTier(ent.Player) >= 4 and lplrTier == 0 then
                     nametag.Visible = false
                     continue
                 end
                 if DistanceCheck.Enabled then
-                    local distance = entitylib.isAlive and (entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude or math_huge
+                    local distance = charRootPos and (charRootPos - ent.RootPart.Position).Magnitude or math_huge
                     if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
                         nametag.Text.Visible = false
                         nametag.BG.Visible = false
@@ -9919,7 +9925,7 @@ run(function()
                 end
 
                 if Distance.Enabled then
-                    local mag = entitylib.isAlive and math_floor((entitylib.character.RootPart.Position - ent.RootPart.Position).Magnitude) or 0
+                    local mag = charRootPos and math_floor((charRootPos - ent.RootPart.Position).Magnitude) or 0
                     if Sizes[ent] ~= mag then
                         nametag.Text.Text = string_format(Strings[ent], mag)
                         nametag.BG.Size = vector2new(nametag.Text.TextBounds.X + 8, nametag.Text.TextBounds.Y + 7)
@@ -10982,7 +10988,7 @@ run(function()
 				local res = {old(...)}
 				local self, block = ...
 
-				if (workspace:GetServerTimeNow() - self.lastLaunch) < 0.4 then
+				if (_getServerTime() - self.lastLaunch) < 0.4 then
 					if block:GetAttribute('PlacedByUserId') == lplr.UserId and (block.Position - entitylib.character.RootPart.Position).Magnitude < 30 then
 						if not Legit.Enabled or isHoldingPickaxe() then
 							task.spawn(bedwars.breakBlock, block, false, nil, true)
@@ -11277,7 +11283,7 @@ run(function()
 					bedwars.DragonSlayerController:deleteEmblem(v)
 
 					local playerPos = character:GetPrimaryPartCFrame().Position
-					local targetPos = v:GetPrimaryPartCFrame().Position * Vector3.new(1, 0, 1) + Vector3.new(0, playerPos.Y, 0)
+					local targetPos = v:GetPrimaryPartCFrame().Position * _FLAT + Vector3.new(0, playerPos.Y, 0)
 					local lookAtCFrame = CFrame.new(playerPos, targetPos)
 
 					character:PivotTo(lookAtCFrame)
@@ -11689,7 +11695,7 @@ run(function()
 					end
 
 					if Legit.Enabled and isCasting then task.wait(0.1); continue end
-					if (workspace:GetServerTimeNow() - lastAttackTime) < attackCooldown then task.wait(0.1); continue end
+					if (_getServerTime() - lastAttackTime) < attackCooldown then task.wait(0.1); continue end
 
 					local handItem = lplr.Character:FindFirstChild('HandInvItem')
 					local hasClaw = handItem and handItem.Value and handItem.Value.Name:find('summoner_claw')
@@ -11718,7 +11724,7 @@ run(function()
 						local shootDir = CFrame.lookAt(localPosition, predictedPos).LookVector
 						localPosition += shootDir * math.max((localPosition - predictedPos).Magnitude - 16, 0)
 
-						lastAttackTime = workspace:GetServerTimeNow()
+						lastAttackTime = _getServerTime()
 
 						pcall(function()
 							bedwars.AnimationUtil:playAnimation(lplr, bedwars.GameAnimationUtil:getAssetId(bedwars.AnimationType.SUMMONER_CHARACTER_SWIPE), {looped = false})
@@ -11802,7 +11808,7 @@ run(function()
 						bedwars.Client:Get(remotes.SummonerClawAttack):SendToServer({
 							position = localPosition,
 							direction = shootDir,
-							clientTime = workspace:GetServerTimeNow()
+							clientTime = _getServerTime()
 						})
 					end
 
@@ -13238,7 +13244,7 @@ run(function()
 								if Diagonal.Enabled then
 									if math.abs(math.round(math.deg(math.atan2(-entitylib.character.Humanoid.MoveDirection.X, -entitylib.character.Humanoid.MoveDirection.Z)) / 45) * 45) % 90 == 45 then
 										local dt = (lastpos - currentpos)
-										if ((dt.X == 0 and dt.Z ~= 0) or (dt.X ~= 0 and dt.Z == 0)) and ((lastpos - root.Position) * Vector3.new(1, 0, 1)).Magnitude < 2.5 then
+										if ((dt.X == 0 and dt.Z ~= 0) or (dt.X ~= 0 and dt.Z == 0)) and ((lastpos - root.Position) * _FLAT).Magnitude < 2.5 then
 											currentpos = lastpos
 										end
 									end
@@ -15756,7 +15762,7 @@ run(function()
 			end
 		end
 
-		if (v:GetAttribute('BedShieldEndTime') or 0) > workspace:GetServerTimeNow() then 
+		if (v:GetAttribute('BedShieldEndTime') or 0) > _getServerTime() then 
 			return false 
 		end
 		
@@ -18236,7 +18242,7 @@ run(function()
 						bedwars.Client:Get(remotes.SummonerClawAttack):SendToServer({
 							position = localPosition,
 							direction = shootDir,
-							clientTime = workspace:GetServerTimeNow()
+							clientTime = _getServerTime()
 						})
 					end
 				end
@@ -18468,7 +18474,7 @@ run(function()
 								bedwars.Client:Get(remotes.SummonerClawAttack):SendToServer({
 									position = localPosition,
 									direction = shootDir,
-									clientTime = workspace:GetServerTimeNow()
+									clientTime = _getServerTime()
 								})
 							end
 						end
@@ -25368,7 +25374,7 @@ run(function()
         end)
         
         local playerPos = character:GetPrimaryPartCFrame().Position
-        local targetPos = target:GetPrimaryPartCFrame().Position * Vector3.new(1, 0, 1) + Vector3.new(0, playerPos.Y, 0)
+        local targetPos = target:GetPrimaryPartCFrame().Position * _FLAT + Vector3.new(0, playerPos.Y, 0)
         local lookAtCFrame = CFrame.new(playerPos, targetPos)
         
         character:PivotTo(lookAtCFrame)
@@ -25712,7 +25718,8 @@ run(function()
 
         Grove:Clean(runService.RenderStepped:Connect(function()
             if not SpiritESP.Enabled then return end
-            
+
+            local charPos = entitylib.isAlive and entitylib.character and entitylib.character.RootPart and entitylib.character.RootPart.Position
             for v, billboard in pairs(Reference) do
                 if not v or not v.Parent then
                     Removed(v)
@@ -25722,7 +25729,7 @@ run(function()
                 local shouldShow = true
 
                 if shouldShow and DistanceCheck.Enabled and entitylib.isAlive then
-                    local distance = (entitylib.character.RootPart.Position - v.Position).Magnitude
+                    local distance = charPos and (charPos - v.Position).Magnitude or math.huge
                     if distance < DistanceLimit.ValueMin or distance > DistanceLimit.ValueMax then
                         shouldShow = false
                     end
@@ -25825,7 +25832,7 @@ run(function()
                 
                 for _, orb in tagged do
                     local spawnTime = orb:GetAttribute("SpawnTime")
-                    if spawnTime and (Workspace:GetServerTimeNow() - spawnTime) >= 1 then
+                    if spawnTime and (_getServerTime() - spawnTime) >= 1 then
                         local orbPosition = orb:GetPivot().Position
                         local distance = (localPosition - orbPosition).Magnitude
                         
@@ -28208,12 +28215,26 @@ run(function()
 			invisConns[tool] = nil
 		end
 		local conn
+		local sweepConns = {}
+		local dirty = true
+		local function markDirty()
+			dirty = true
+		end
+		pcall(function()
+			sweepConns[1] = tool.DescendantAdded:Connect(markDirty)
+			sweepConns[2] = tool.DescendantRemoving:Connect(markDirty)
+		end)
 		conn = RunService.RenderStepped:Connect(function()
 			if not tool or not tool.Parent then
+				for i = 1, 2 do
+					if sweepConns[i] then pcall(function() sweepConns[i]:Disconnect() end) end
+				end
 				conn:Disconnect()
 				invisConns[tool] = nil
 				return
 			end
+			if not dirty then return end
+			dirty = false
 			local reskin = tool:FindFirstChild("LOCAL_ITEM_RESKIN")
 			for _, d in ipairs(tool:GetDescendants()) do
 				if reskin and d:IsDescendantOf(reskin) then continue end
@@ -28944,7 +28965,7 @@ run(function()
                 pcall(function()
                     local hrp = character.HumanoidRootPart
                     local mass = hrp.AssemblyMass or 5
-                    hrp:ApplyImpulse(lookVector.Unit * Vector3.new(1, 0, 1) * mass * ImpulseSlider.Value)
+                    hrp:ApplyImpulse(lookVector.Unit * _FLAT * mass * ImpulseSlider.Value)
                     character.Humanoid.JumpHeight = JumpHeightSlider.Value
                     character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 end)
@@ -29112,7 +29133,7 @@ run(function()
 				end
 				runService:BindToRenderStep('antieffects_sleep', Enum.RenderPriority.Character.Value + 2, function()
 					local stunTime = char:GetAttribute('StunnedUntilTime')
-					local now = workspace:GetServerTimeNow()
+					local now = _getServerTime()
 					if stunTime and stunTime > now then
 						char:SetAttribute('StunnedUntilTime', -1)
 					end
@@ -31154,7 +31175,8 @@ run(function()
                 continue
             end
 
-            if bed:GetAttribute("BedShieldEndTime") and bed:GetAttribute("BedShieldEndTime") > workspace:GetServerTimeNow() then
+            local bedShield = bed:GetAttribute("BedShieldEndTime")
+            if bedShield and bedShield > _getServerTime() then
                 continue
             end
 
@@ -31166,8 +31188,8 @@ run(function()
             if distance > bedassistrange.Value then continue end
 
             local delta = (bed.Position - playerPos)
-            local localfacing = (lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") and lplr.Character.HumanoidRootPart.CFrame.LookVector * Vector3.new(1, 0, 1)) or Vector3.new(1, 0, 0)
-            local angle = math.acos(localfacing:Dot((delta * Vector3.new(1, 0, 1)).Unit))
+local localfacing = (lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") and lplr.Character.HumanoidRootPart.CFrame.LookVector * _FLAT) or Vector3.new(1, 0, 0)
+	local angle = math.acos(localfacing:Dot((delta * _FLAT).Unit))
 
             if angle <= math.rad(bedassistangle.Value) / 2 then
                 if bedassistlowestblock.Enabled then
@@ -31594,8 +31616,8 @@ run(function()
                         if target then
 							if getAccountTier(target.Player) >= 1 and getAccountTier(lplr) == 0 then continue end
                             local selfpos = entitylib.character.RootPart.Position
-                            local localFacing = (ViewMode.Value == 'Third Person' and gameCamera.CFrame.LookVector or entitylib.character.RootPart.CFrame.LookVector) * Vector3.new(1, 0, 1)
-                            local delta = (target.RootPart.Position - selfpos) * Vector3.new(1, 0, 1)
+local localFacing = (ViewMode.Value == 'Third Person' and gameCamera.CFrame.LookVector or entitylib.character.RootPart.CFrame.LookVector) * _FLAT
+	local delta = (target.RootPart.Position - selfpos) * _FLAT
                             if delta.Magnitude > 0.001 then
                                 local angle = math.acos(math.clamp(localfacing:Dot(delta.Unit), -1, 1))
                                 if angle <= math.rad(FOV.Value) / 2 then
@@ -32560,7 +32582,7 @@ run(function()
 
 	local function gatherSilentTargets(maxRange)
 		local selfpos = entitylib.character.RootPart.Position
-		local facing = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+		local facing = entitylib.character.RootPart.CFrame.LookVector * _FLAT
 		local maxAngle = math.rad(105) / 2
 		local all = entitylib.AllPosition({
 			Range = maxRange,
@@ -32572,7 +32594,7 @@ run(function()
 		})
 		local filtered = {}
 		for _, v in all do
-			local flat = (v.RootPart.Position - selfpos) * Vector3.new(1, 0, 1)
+			local flat = (v.RootPart.Position - selfpos) * _FLAT
 			if flat.Magnitude > 0.01 and math.acos(math.clamp(facing.Unit:Dot(flat.Unit), -1, 1)) <= maxAngle then
 				table.insert(filtered, v)
 				if #filtered >= 2 then break end
