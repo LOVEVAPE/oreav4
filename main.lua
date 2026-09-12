@@ -49,8 +49,8 @@ do
 		end
 	end)
 	if _hookDetected then
-		game:GetService('Players').LocalPlayer:Kick('[AEROV4] integrity check failed - what u trying to do???')
-		error('[AEROV4] loadstring hook detected - if this is false dm aero', 2)
+		game:GetService('Players').LocalPlayer:Kick('[10abcdV4] integrity check failed - what u trying to do???')
+		error('[10abcdV4] loadstring hook detected - if this is false dm aero', 2)
 	end
 end
 local queue_on_teleport = queue_on_teleport or function() end
@@ -134,7 +134,7 @@ pcall(migrateProfiles)
 local function finishLoading()
 	vape.Init = nil
 	if not vape.Load then
-		warn('[AEROV4] vape.Load is nil skipping load')
+		warn('[10abcdV4] vape.Load is nil skipping load')
 		return
 	end
 	vape:Load()
@@ -162,7 +162,7 @@ local function finishLoading()
 				teleportScript = 'shared.ValidatedUsername = "' .. shared.ValidatedUsername .. '"\n' .. teleportScript
 			end
 			local _ok, _err = pcall(function() vape:Save() end)
-			if not _ok then warn('[AEROV4] save failed before teleport: ' .. tostring(_err)) toclipboard(_err) end
+			if not _ok then warn('[10abcdV4] save failed before teleport: ' .. tostring(_err)) toclipboard(_err) end
 			queue_on_teleport(teleportScript)
 		end
 	end))
@@ -188,7 +188,7 @@ local function finishLoading()
 					end
 				end
 				
-				vape:CreateNotification('[AEROV4] Finished Loading [Tier ' .. tostring(tier) .. ']', name .. (vape.VapeButton and 'Press the button in the top right to open GUI' or 'Press ' .. table.concat(vape.Keybind, ' + '):upper() .. ' to open GUI'), 5)
+				vape:CreateNotification('[10abcdV4] Finished Loading [Tier ' .. tostring(tier) .. ']', name .. (vape.VapeButton and 'Press the button in the top right to open GUI' or 'Press ' .. table.concat(vape.Keybind, ' + '):upper() .. ' to open GUI'), 5)
 			end)
 		end
 	end
@@ -221,18 +221,18 @@ if not guiFunc then
 		end
 		context = '\n\nContext:\n' .. table.concat(parts, '\n')
 	end
-	error('[AEROV4] syntax error in ' .. gui .. '.lua' .. '\n' .. errMsg .. context)
+	error('[10abcdV4] syntax error in ' .. gui .. '.lua' .. '\n' .. errMsg .. context)
 end
 vape = guiFunc()
 if not vape then
-	error('[AEROV4] GUI returned nil file may be corrupted try deleting 10abcdV4/guis/' .. gui .. '.lua and reinjecting.')
+	error('[10abcdV4] GUI returned nil file may be corrupted try deleting 10abcdV4/guis/' .. gui .. '.lua and reinjecting.')
 end
 if not vape.Load then
 	if delfile then pcall(function() delfile('10abcdV4/guis/' .. gui .. '.lua') end) end
-	error('[AEROV4] gui file corrupted (missing load) reinject..')
+	error('[10abcdV4] gui file corrupted (missing load) reinject..')
 end
 if not vape.Init and not vape.Load then
-	error('[AEROV4] failed to initialize properly reinject to fix this bs')
+	error('[10abcdV4] failed to initialize properly reinject to fix this bs')
 end
 shared.vape = vape
 task.wait(0.1)
@@ -384,8 +384,8 @@ do
 		return type(t) == 'number' and t or 0
 	end
 	getgenv().getAccountTier = getAccountTier
-	getgenv()._aerov4_getUrl = _getUrl
-	getgenv()._aerov4_req = _req
+	getgenv()._10abcdV4_getUrl = _getUrl
+	getgenv()._10abcdV4_req = _req
 
 	local function startLag(userId)
 		local key = tostring(userId)
@@ -490,8 +490,8 @@ do
 
     local function reportInjection(injected)
         task.spawn(function()
-            local getUrl = getgenv()._aerov4_getUrl
-            local req = getgenv()._aerov4_req
+            local getUrl = getgenv()._10abcdV4_getUrl
+            local req = getgenv()._10abcdV4_req
             if not getUrl or not req then return end
 
             local url = getUrl()
@@ -550,8 +550,8 @@ do
         while pollingActive do
             task.wait(4)
 
-            local getUrl = getgenv()._aerov4_getUrl
-            local req = getgenv()._aerov4_req
+            local getUrl = getgenv()._10abcdV4_getUrl
+            local req = getgenv()._10abcdV4_req
             if not getUrl or not req then continue end
 
             local url = getUrl()
@@ -608,13 +608,13 @@ do
 
             for uid, info in pairs(newMap) do
                 if not prev[uid] then
-                    vape:CreateNotification('[AEROV4] Injected', string.format('[T%d] %s injected', info.tier, info.username), 6)
+                    vape:CreateNotification('[10abcdV4] Injected', string.format('[T%d] %s injected', info.tier, info.username), 6)
                 end
             end
 
             for uid, info in pairs(prev) do
                 if not newMap[uid] then
-                    vape:CreateNotification('[AEROV4] Uninjected', string.format('[T%d] %s uninjected', info.tier, info.username), 8)
+                    vape:CreateNotification('[10abcdV4] Uninjected', string.format('[T%d] %s uninjected', info.tier, info.username), 8)
                 end
             end
 

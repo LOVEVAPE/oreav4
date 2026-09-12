@@ -32,6 +32,6 @@ for _, item in ipairs(listfiles(folderToClean)) do
     end
 end
 
-print("loading aerov4...")
+print("loading 10abcdV4...")
 task.wait(1) --no no crash dabo
 loadstring(game:HttpGet(reinstallUrl, true))()

@@ -1,7 +1,7 @@
 local run = function(func)
     local ok, err = pcall(func)
     if not ok then
-        warn('[AEROV4] module failed to load: ' .. tostring(err))
+        warn('[10abcdV4] module failed to load: ' .. tostring(err))
     end
 end
 local vapeEvents = setmetatable({}, {
@@ -1045,13 +1045,13 @@ run(function()
 		end)
 		bedwarsTries += 1
 		if not bedwarsBuilt and bedwarsTries < 20 then
-			warn('[AEROV4] bedwars build attempt '..bedwarsTries..' failed: '..tostring(bedwarsErr))
+			warn('[10abcdV4] bedwars build attempt '..bedwarsTries..' failed: '..tostring(bedwarsErr))
 			task.wait(0.3)
 		end
 	until bedwarsBuilt or bedwarsTries >= 20
 
 	if not bedwarsBuilt then
-		warn('[AEROV4] bedwars table failed to build after '..bedwarsTries..' attempts. Last error: '..tostring(bedwarsErr))
+		warn('[10abcdV4] bedwars table failed to build after '..bedwarsTries..' attempts. Last error: '..tostring(bedwarsErr))
 		bedwars = {}
 	end
 
@@ -2582,6 +2582,16 @@ run(function()
         local BlockCPS = {}
         local Thread
 
+        local task_wait = task.wait
+        local task_spawn = task.spawn
+        local task_cancel = task.cancel
+        local SC = bedwars.SwordController
+        local AppController = bedwars.AppController
+        local UILayers_MAIN = bedwars.UILayers.MAIN
+        local PlaceController = bedwars.BlockPlacementController
+        local blockCPS = bedwars.BlockCpsController
+        local KnockbackController = bedwars.KnockbackController
+
         local function getSafeCPS()
             if store.hand and store.hand.toolType == 'block' and BlockCPS and BlockCPS.GetRandomValue then
                 return BlockCPS
@@ -2594,7 +2604,7 @@ run(function()
 
         local function AutoClick()
             if Thread then
-                task.cancel(Thread)
+                task_cancel(Thread)
                 Thread = nil
             end
 
@@ -2603,24 +2613,24 @@ run(function()
 
             Thread = task.delay(1 / initialCPS.GetRandomValue(), function()
                 repeat
-                    if not bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then
-                        local blockPlacer = bedwars.BlockPlacementController and bedwars.BlockPlacementController.blockPlacer
+                    if not AppController:isLayerOpen(UILayers_MAIN) then
+                        local blockPlacer = PlaceController and PlaceController.blockPlacer
                         local toolType = store.hand and store.hand.toolType
 
                         if toolType == 'block' and blockPlacer then
-                            task.spawn(function()
-                                blockPlacer:autoBridge(workspace:GetServerTimeNow() - bedwars.KnockbackController:getLastKnockbackTime() >= 0.2)
+                            task_spawn(function()
+                                blockPlacer:autoBridge(workspace:GetServerTimeNow() - KnockbackController:getLastKnockbackTime() >= 0.2)
                             end)
                         elseif toolType == 'sword' then
-                            bedwars.SwordController:swingSwordAtMouse(0.39)
+                            SC:swingSwordAtMouse(0.39)
                         end
                     end
 
                     local currentCPS = getSafeCPS()
                     if not currentCPS then
-                        task.wait(0.1)
+                        task_wait(0.1)
                     else
-                        task.wait(1 / currentCPS.GetRandomValue())
+                        task_wait(1 / currentCPS.GetRandomValue())
                     end
                 until not AutoClicker.Enabled
             end)
@@ -2706,7 +2716,13 @@ run(function()
 
         local task_wait = task.wait
         local task_spawn = task.spawn
+        local task_cancel = task.cancel
         local workspace_GetServerTimeNow = function() return workspace:GetServerTimeNow() end
+        local SC = bedwars.SwordController
+        local AppController = bedwars.AppController
+        local UILayers_MAIN = bedwars.UILayers.MAIN
+        local PlaceController = bedwars.BlockPlacementController
+        local blockCPS = bedwars.BlockCpsController
 
         local function getSafeCPS()
             local toolType = store.hand and store.hand.toolType or nil
@@ -2721,15 +2737,15 @@ run(function()
         end
 
         local function AutoClickAero()
-            if Thread then task.cancel(Thread) end
+            if Thread then task_cancel(Thread) end
             Thread = task_spawn(function()
                 repeat
-                    if not bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then
+                    if not AppController:isLayerOpen(UILayers_MAIN) then
                         local toolType = store.hand and store.hand.toolType
                         if PlaceBlocksToggle.Enabled and toolType == 'block' then
-                            local blockPlacer = bedwars.BlockPlacementController and bedwars.BlockPlacementController.blockPlacer
+                            local blockPlacer = PlaceController and PlaceController.blockPlacer
                             if blockPlacer then
-                                if (workspace_GetServerTimeNow() - bedwars.BlockCpsController.lastPlaceTimestamp) >= ((1 / 12) * 0.5) then
+                                if (workspace_GetServerTimeNow() - blockCPS.lastPlaceTimestamp) >= ((1 / 12) * 0.5) then
                                     local mouseinfo = blockPlacer.clientManager:getBlockSelector():getMouseInfo(0)
                                     if mouseinfo and mouseinfo.placementPosition == mouseinfo.placementPosition then
                                         task_spawn(blockPlacer.placeBlock, blockPlacer, mouseinfo.placementPosition)
@@ -2737,7 +2753,7 @@ run(function()
                                 end
                             end
                         elseif SwingSwordToggle.Enabled and toolType == 'sword' then
-                            bedwars.SwordController:swingSwordAtMouse(0.39)
+                            SC:swingSwordAtMouse(0.39)
                         end
                     end
 
@@ -4815,6 +4831,7 @@ run(function()
     local SwingTime
     local SwingTimeSlider
     local swingCooldown = 0
+    local lastFiredSwing = 0
     local ContinueSwinging
     local ContinueSwingTime
     local lastTargetTime = 0
@@ -4832,6 +4849,9 @@ run(function()
     local FastHits
     local FastHitsMode
     local LegitSwitch
+    local SC = bedwars.SwordController
+    local _FLAT = Vector3.new(1, 0, 1)
+    local _getServerTime = workspace.GetServerTimeNow
     local OldShootInterval
     local OldSwitchDelay
     local OldWaitDelay
@@ -5001,7 +5021,7 @@ run(function()
     local function getAttackData()
         if AttackCheck and AttackCheck.Enabled then
             local stunTime = lplr.Character and lplr.Character:GetAttribute('StunnedUntilTime')
-            if stunTime and stunTime > workspace:GetServerTimeNow() then return false end
+            if stunTime and stunTime > _getServerTime() then return false end
             if kitChecks then
                 for _, check in pairs(kitChecks) do
                     if check() then return false end
@@ -5010,7 +5030,7 @@ run(function()
         end
 
         if Mouse and Mouse.Enabled then
-            local recentSwing = LegitAura and LegitAura.Enabled and (tick() - bedwars.SwordController.lastSwing) <= 0.2
+            local recentSwing = LegitAura and LegitAura.Enabled and (tick() - SC.lastSwing) <= 0.2
             if not recentSwing then
                 local mousePressed = inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
                 if not mousePressed then return false end
@@ -5036,7 +5056,9 @@ run(function()
         end
 
         if LegitAura and LegitAura.Enabled then
-            if (tick() - bedwars.SwordController.lastSwing) > 0.2 then return false end
+            local lastSwing = SC.lastSwing or 0
+            if (tick() - lastSwing) > 0.2 then return false end
+            if lastSwing == lastFiredSwing then return false end
         end
 
         if SwingTime and SwingTime.Enabled then
@@ -5047,12 +5069,12 @@ run(function()
     end
 
     local function resetSwordCooldown()
-        if bedwars.SwordController then
-            bedwars.SwordController.lastAttack = 0
-            bedwars.SwordController.lastSwing = 0
-            if bedwars.SwordController.lastChargedAttackTimeMap then
-                for weaponName, _ in pairs(bedwars.SwordController.lastChargedAttackTimeMap) do
-                    bedwars.SwordController.lastChargedAttackTimeMap[weaponName] = 0
+        if SC then
+            SC.lastAttack = 0
+            SC.lastSwing = 0
+            if SC.lastChargedAttackTimeMap then
+                for weaponName, _ in pairs(SC.lastChargedAttackTimeMap) do
+                    SC.lastChargedAttackTimeMap[weaponName] = 0
                 end
             end
         end
@@ -5176,7 +5198,7 @@ run(function()
 			item.tool, ammo, projectile, shootPos, selfPos,
 			dir * projSpeed, id,
 			{drawDurationSeconds = 1, shotId = httpService:GenerateGUID(false)},
-			workspace:GetServerTimeNow() - ping
+			_getServerTime() - ping
 		)
 		if res then
 			pcall(function() res.Parent = replicatedStorage end)
@@ -5504,7 +5526,7 @@ run(function()
                     if AttackCheck and AttackCheck.Enabled then
                         local triggered = false
                         local stunTime = lplr.Character and lplr.Character:GetAttribute('StunnedUntilTime')
-                        if stunTime and stunTime > workspace:GetServerTimeNow() then triggered = true end
+                        if stunTime and stunTime > _getServerTime() then triggered = true end
                         if not triggered and kitChecks then
                             for _, check in pairs(kitChecks) do
                                 if check() then triggered = true break end
@@ -5541,7 +5563,7 @@ run(function()
                         local isClaw = _cachedIsClaw
 
                         local selfpos = entitylib.character.RootPart.Position
-                        local flatLV = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
+                        local flatLV = entitylib.character.RootPart.CFrame.LookVector * _FLAT
                         local localfacing = flatLV.Magnitude > 0.001 and flatLV.Unit or entitylib.character.RootPart.CFrame.RightVector
                         local maxAngle = math.rad(AngleSlider.Value) / 2
                         local _cachedPing = math.clamp(lplr:GetNetworkPing(), 0.03, 0.4)
@@ -5551,7 +5573,7 @@ run(function()
                         local hasValidAttackTargets = false
 
 						for _, v in swingPlrs do
-							local flat = (v.RootPart.Position - selfpos) * Vector3.new(1, 0, 1)
+							local flat = (v.RootPart.Position - selfpos) * _FLAT
 							if flat.Magnitude <= 1.0 or math.acos(math.clamp(localfacing:Dot(flat.Unit), -1, 1)) <= maxAngle then
 								hasValidSwingTargets = true
 								break
@@ -5559,7 +5581,7 @@ run(function()
 						end
 
 						for _, v in attackPlrs do
-							local flat = (v.RootPart.Position - selfpos) * Vector3.new(1, 0, 1)
+							local flat = (v.RootPart.Position - selfpos) * _FLAT
 							if flat.Magnitude <= 1.0 or math.acos(math.clamp(localfacing:Dot(flat.Unit), -1, 1)) <= maxAngle then
 								hasValidAttackTargets = true
 								break
@@ -5583,7 +5605,7 @@ run(function()
                             if hasValidAttackTargets then
                                 for _, v in attackPlrs do
                                     local delta = v.RootPart.Position - selfpos
-                                    local flat = delta * Vector3.new(1, 0, 1)
+                                    local flat = delta * _FLAT
                                     if flat.Magnitude > 1.0 and math.acos(math.clamp(localfacing:Dot(flat.Unit), -1, 1)) > maxAngle then continue end
 
                                     table.insert(attacked, {
@@ -5606,7 +5628,7 @@ run(function()
                                                 local swingSpeed = SwingTime and SwingTime.Enabled and math.max(SwingTimeSlider.Value, 0.11) or (meta.sword and meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or 0.25)
                                                 AnimDelay = tick() + swingSpeed
                                                 pcall(function()
-                                                    bedwars.SwordController:playSwordEffect(meta, false)
+                                                    SC:playSwordEffect(meta, false)
                                                     if meta.displayName:find(' Scythe') then
                                                         bedwars.ScytheController:playLocalAnimation()
                                                     end
@@ -5654,19 +5676,22 @@ run(function()
                                         swingCooldown = tick()
                                     end
 
-                                    local _serverNow = workspace:GetServerTimeNow()
+                                    local _serverNow = _getServerTime()
                                     lastSwingServerTimeDelta = _serverNow - lastSwingServerTime
                                     lastSwingServerTime = _serverNow
                                     store.attackReach = (delta.Magnitude * 100) // 1 / 100
                                     store.attackReachUpdate = tick() + 1
                                     lastAttackTime = tick()
+                                    if LegitAura and LegitAura.Enabled then
+                                        lastFiredSwing = SC.lastSwing or 0
+                                    end
 
                                     -- AnimDelay throttle kept to prevent swing animation duplication
 
                                     if isClaw then
                                         pcall(function() KaidaController:request(v.Character) end)
                                     else
-                                        bedwars.SwordController.lastAttack = _serverNow
+                                        SC.lastAttack = _serverNow
                                         _swingCooldown = tick()
                                         FireAttackRemote({
                                             weapon = sword.tool,
@@ -5691,7 +5716,7 @@ run(function()
                                         local swingSpeed = SwingTime and SwingTime.Enabled and math.max(SwingTimeSlider.Value, 0.11) or (meta.sword and meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or 0.25)
                                         AnimDelay = tick() + swingSpeed
                                         pcall(function()
-                                            bedwars.SwordController:playSwordEffect(meta, false)
+                                            SC:playSwordEffect(meta, false)
                                             if meta.displayName:find(' Scythe') then
                                                 bedwars.ScytheController:playLocalAnimation()
                                             end
@@ -5724,7 +5749,7 @@ run(function()
                     end)
 
                     if Face and Face.Enabled and attacked[1] then
-                        local vec = attacked[1].Entity.RootPart.Position * Vector3.new(1, 0, 1)
+                        local vec = attacked[1].Entity.RootPart.Position * _FLAT
                         local targetCFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y + 0.001, vec.Z))
                         local speed = FaceSpeed and FaceSpeed.Value or 15
                         entitylib.character.RootPart.CFrame = entitylib.character.RootPart.CFrame:Lerp(targetCFrame, math.clamp(speed / 100, 0.01, 1))
@@ -6265,20 +6290,23 @@ run(function()
 	local FROZEN_THRESHOLD = 10
 	local Particles, Boxes = {}, {}
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
+	local _FLAT = Vector3.new(1, 0, 1)
+	local SC = bedwars.SwordController
+	local _getServerTime = workspace.GetServerTimeNow
 	local AttackRemote = {FireServer = function() end}
 	task.spawn(function()
 		AttackRemote = bedwars.Client:Get(remotes.AttackEntity).instance
 	end)
 
 	local function flatAngle(selfpos, targetpos, facing)
-		local flat = (targetpos - selfpos) * Vector3.new(1, 0, 1)
+		local flat = (targetpos - selfpos) * _FLAT
 		if flat.Magnitude < 0.001 then return 0 end
 		return math.acos(math.clamp(facing:Dot(flat.Unit), -1, 1))
 	end
 
 	local function flatFacing(rootCFrame)
-		local lv = rootCFrame.LookVector * Vector3.new(1, 0, 1)
-		if lv.Magnitude < 0.001 then return rootCFrame.RightVector * Vector3.new(1, 0, 1) end
+		local lv = rootCFrame.LookVector * _FLAT
+		if lv.Magnitude < 0.001 then return rootCFrame.RightVector * _FLAT end
 		return lv.Unit
 	end
 
@@ -6292,7 +6320,7 @@ run(function()
 	local function getAttackData()
 		if AttackCheck and AttackCheck.Enabled then
 			local stunTime = lplr.Character and lplr.Character:GetAttribute('StunnedUntilTime')
-			if stunTime and stunTime > workspace:GetServerTimeNow() then return false end
+			if stunTime and stunTime > _getServerTime() then return false end
 			if kitChecks then
 				for _, check in pairs(kitChecks) do
 					if check() then return false end
@@ -6314,7 +6342,7 @@ run(function()
 			if store.hand.toolType ~= 'sword' or bedwars.DaoController.chargingMaid then return false end
 		end
 		if LegitAura and LegitAura.Enabled then
-			local lastSwing = bedwars.SwordController.lastSwing or 0
+			local lastSwing = SC.lastSwing or 0
 			if (tick() - lastSwing) > 0.5 then return false end
 			if lastSwing == lastFiredSwing then return false end
 		end
@@ -6350,7 +6378,7 @@ run(function()
 						repeat
 							if AttackCheck and AttackCheck.Enabled then
 								local stunTime = lplr.Character and lplr.Character:GetAttribute('StunnedUntilTime')
-								if stunTime and stunTime > workspace:GetServerTimeNow() then
+								if stunTime and stunTime > _getServerTime() then
 									Attacking = false
 									store.KillauraTarget = nil
 									task.wait(0.3)
@@ -6403,7 +6431,7 @@ run(function()
 				repeat
 					if AttackCheck and AttackCheck.Enabled then
 						local stunTime = lplr.Character and lplr.Character:GetAttribute('StunnedUntilTime')
-						if stunTime and stunTime > workspace:GetServerTimeNow() then
+						if stunTime and stunTime > _getServerTime() then
 							Attacking = false
 							store.KillauraTarget = nil
 							task.wait(0.3)
@@ -6461,7 +6489,7 @@ run(function()
 									local allowSwingAnim = not (Swing and Swing.Enabled) and AnimDelay < tick() and not (LegitAura and LegitAura.Enabled) and not (Animation and Animation.Enabled)
 									if allowSwingAnim then
 										AnimDelay = tick() + (meta.sword.respectAttackSpeedForEffects and meta.sword.attackSpeed or math.max(ChargeTime.Value, 0.11))
-										bedwars.SwordController:playSwordEffect(meta, false)
+										SC:playSwordEffect(meta, false)
 										if meta.displayName:find(' Scythe') then
 											bedwars.ScytheController:playLocalAnimation()
 										end
@@ -6481,9 +6509,9 @@ run(function()
 								local pos = selfpos + dir * math.max(delta.Magnitude - 14.399, 0)
 								swingCooldown = tick()
 								if LegitAura and LegitAura.Enabled then
-									lastFiredSwing = bedwars.SwordController.lastSwing or 0
+									lastFiredSwing = SC.lastSwing or 0
 								end
-								bedwars.SwordController.lastAttack = workspace:GetServerTimeNow()
+								SC.lastAttack = _getServerTime()
 								store.attackReach = (delta.Magnitude * 100) // 1 / 100
 								store.attackReachUpdate = tick() + 1
 
@@ -6535,7 +6563,7 @@ run(function()
 					end)
 
 					if Face and Face.Enabled and attacked[1] then
-						local vec = attacked[1].Entity.RootPart.Position * Vector3.new(1, 0, 1)
+						local vec = attacked[1].Entity.RootPart.Position * _FLAT
 						entitylib.character.RootPart.CFrame = CFrame.lookAt(entitylib.character.RootPart.Position, Vector3.new(vec.X, entitylib.character.RootPart.Position.Y + 0.001, vec.Z))
 					end
 
@@ -9849,7 +9877,7 @@ run(function()
                             newKitImage = res.renderImage
                         else
                             if not suc then
-                                warn(`[AEROV4 MODULE ISSUE]: [Module - NameTags (Using bedwars.BedwarsKitMeta)] [Error]: {res}`)
+                                warn(`[10abcdV4 MODULE ISSUE]: [Module - NameTags (Using bedwars.BedwarsKitMeta)] [Error]: {res}`)
                             end
                             newKitImage = kitImageIds[kit] or kitImageIds['none']
                         end
@@ -17589,9 +17617,9 @@ run(function()
 	local processing = {}
 
 	local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body='{}'} end
-	if not getgenv()._aerov4_getBackendUrl then
+	if not getgenv()._10abcdV4_getBackendUrl then
 		local _cachedUrl
-		getgenv()._aerov4_getBackendUrl = function()
+		getgenv()._10abcdV4_getBackendUrl = function()
 			if _cachedUrl then return _cachedUrl end
 			if getgenv()._aeroBackendUrl then
 				_cachedUrl = tostring(getgenv()._aeroBackendUrl)
@@ -17606,7 +17634,7 @@ run(function()
 			return _cachedUrl
 		end
 	end
-	local _bu = getgenv()._aerov4_getBackendUrl
+	local _bu = getgenv()._10abcdV4_getBackendUrl
 
 	local listsLoaded = false
 	task.spawn(function()
@@ -17645,7 +17673,7 @@ run(function()
 		listsLoaded = true
 	end)
 
-	getgenv()._aerov4_staffCounts = {spec=0, closet=0, mod=0, impossible=0}
+	getgenv()._10abcdV4_staffCounts = {spec=0, closet=0, mod=0, impossible=0}
 	local function refreshStaffCounts()
 		local c = {spec=0, closet=0, mod=0, impossible=0}
 		for _, data in pairs(detectedPlayers) do
@@ -17655,7 +17683,7 @@ run(function()
 			elseif ct == 'impossible_join' then c.impossible += 1
 			else c.mod += 1 end
 		end
-		getgenv()._aerov4_staffCounts = c
+		getgenv()._10abcdV4_staffCounts = c
 		vapeEvents.StaffCountUpdate:Fire()
 	end
 
@@ -17861,7 +17889,7 @@ run(function()
 	local watchers = {}
 
 	local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body='{"tier":0}'} end
-	local _bu = getgenv()._aerov4_getBackendUrl or function()
+	local _bu = getgenv()._10abcdV4_getBackendUrl or function()
 		local ok, res = pcall(function()
 			return _req({Url='https://gist.githubusercontent.com/LOVEVAPE/YOUR-GIST-ID/raw/url.txt',Method='GET'})
 		end)
@@ -29000,7 +29028,7 @@ run(function()
 						bedwars.GlacialSkaterController:updateMomentum(100, "newValue")
 					end)
 					if not suc then
-						warn(`[AEROV4 MODULE ISSUE]: [Module - InfKrystal (Starting to update Momentum)] [Error]: {res}`)
+						warn(`[10abcdV4 MODULE ISSUE]: [Module - InfKrystal (Starting to update Momentum)] [Error]: {res}`)
 						runService:UnbindFromRenderStep('InfiniteKrystalMovement')
 					end
 				end)
@@ -29011,7 +29039,7 @@ run(function()
 					bedwars.GlacialSkaterController:updateMomentum(0, "newValue")
 				end)
 				if not suc then
-					warn(`[AEROV4 MODULE ISSUE]: [Module - InfKrystal (Resetting updateMomentum function)] [Error]: {res}`)
+					warn(`[10abcdV4 MODULE ISSUE]: [Module - InfKrystal (Resetting updateMomentum function)] [Error]: {res}`)
 				end
 			end
 		end
@@ -32389,7 +32417,7 @@ end)
 run(function()
 	local _req = (syn and syn.request) or (http_request and function(t) return http_request(t) end) or request or function() return {Body=''} end
 	local function _getBaseUrl()
-		local getUrl = getgenv()._aerov4_getUrl
+		local getUrl = getgenv()._10abcdV4_getUrl
 		if not getUrl then return '' end
 		local url = getUrl()
 		if not url then return '' end
@@ -32413,10 +32441,10 @@ run(function()
 
 	local function loadModule(name, minTier)
 		local secret = getSecret()
-		if not secret then warn('[AEROV4] getsecret failed: ' .. name) return end
+		if not secret then warn('[10abcdV4] getsecret failed: ' .. name) return end
 		if minTier and (getgenv().getAccountTier and getgenv().getAccountTier(game:GetService('Players').LocalPlayer) or 0) < minTier then return end
 		local baseUrl = _getBaseUrl()
-		if baseUrl == '' then warn('[AEROV4] no url for module: ' .. name) return end
+		if baseUrl == '' then warn('[10abcdV4] no url for module: ' .. name) return end
 		local ok2, res2 = pcall(function()
 			return _req({ Url = baseUrl .. '/modules/' .. name .. '?uid=' .. uid, Method = 'GET', Headers = { ['Authorization'] = 'Bearer ' .. secret } })
 		end)
@@ -32424,10 +32452,10 @@ run(function()
 			local fn, err = loadstring(res2.Body, name)
 			if fn then
 				local ok3, err3 = pcall(fn)
-				if not ok3 then warn('[AEROV4] module error: ' .. tostring(err3)) end
+				if not ok3 then warn('[10abcdV4] module error: ' .. tostring(err3)) end
 				res2.Body = nil
 			else
-				warn('[AEROV4] loadstring fail on ' .. name .. ': ' .. tostring(err))
+				warn('[10abcdV4] loadstring fail on ' .. name .. ': ' .. tostring(err))
 			end
 		end
 	end
@@ -32440,7 +32468,7 @@ run(function()
 		end
 		local urlDeadline = tick() + 10
 		while tick() < urlDeadline do
-			local u = getgenv()._aerov4_getUrl and getgenv()._aerov4_getUrl()
+			local u = getgenv()._10abcdV4_getUrl and getgenv()._10abcdV4_getUrl()
 			if u and u ~= '' then break end
 			task.wait(0.5)
 		end
