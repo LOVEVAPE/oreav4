@@ -121,6 +121,8 @@ local store = {
 	silasAbilityTime = 0,
 	terraStompTime = 0,
 	terraKickTime = 0,
+	swingCounter = 0,
+	swingLastTime = 0,
 }
 getgenv().store = store
 local Reach = {}
@@ -2626,6 +2628,8 @@ run(function()
                             end)
                         elseif toolType == 'sword' then
                             SC:swingSwordAtMouse(0.39)
+                            store.swingCounter += 1
+                            store.swingLastTime = tick()
                         end
                     end
 
@@ -2757,6 +2761,8 @@ run(function()
                             end
                         elseif SwingSwordToggle.Enabled and toolType == 'sword' then
                             SC:swingSwordAtMouse(0.39)
+                            store.swingCounter += 1
+                            store.swingLastTime = tick()
                         end
                     end
 
@@ -4834,7 +4840,7 @@ run(function()
     local SwingTime
     local SwingTimeSlider
     local swingCooldown = 0
-    local lastFiredSwing = 0
+local lastFiredSwing = -1
     local ContinueSwinging
     local ContinueSwingTime
     local lastTargetTime = 0
@@ -5060,8 +5066,9 @@ run(function()
 
         if LegitAura and LegitAura.Enabled then
             local lastSwing = SC.lastSwing or 0
-            if (tick() - lastSwing) > 0.2 then return false end
-            if lastSwing == lastFiredSwing then return false end
+            local tickNow = tick()
+            if (tickNow - lastSwing) > 0.2 and (tickNow - (store.swingLastTime or 0)) > 0.2 then return false end
+            if store.swingCounter == lastFiredSwing then return false end
         end
 
         if SwingTime and SwingTime.Enabled then
@@ -5686,7 +5693,7 @@ run(function()
                                     store.attackReachUpdate = tick() + 1
                                     lastAttackTime = tick()
                                     if LegitAura and LegitAura.Enabled then
-                                        lastFiredSwing = SC.lastSwing or 0
+                                        lastFiredSwing = store.swingCounter
                                     end
 
                                     -- AnimDelay throttle kept to prevent swing animation duplication
@@ -6313,7 +6320,7 @@ run(function()
 		return lv.Unit
 	end
 
-	local lastFiredSwing = 0
+	local lastFiredSwing = -1
 
 	kitChecks = {
 		['Sophia'] = function() return isFrozen(nil, FROZEN_THRESHOLD) end,
@@ -6346,8 +6353,9 @@ run(function()
 		end
 		if LegitAura and LegitAura.Enabled then
 			local lastSwing = SC.lastSwing or 0
-			if (tick() - lastSwing) > 0.5 then return false end
-			if lastSwing == lastFiredSwing then return false end
+			local tickNow = tick()
+			if (tickNow - lastSwing) > 0.5 and (tickNow - (store.swingLastTime or 0)) > 0.5 then return false end
+			if store.swingCounter == lastFiredSwing then return false end
 		end
 		return sword, meta
 	end
@@ -6512,7 +6520,7 @@ run(function()
 								local pos = selfpos + dir * math.max(delta.Magnitude - 14.399, 0)
 								swingCooldown = tick()
 								if LegitAura and LegitAura.Enabled then
-									lastFiredSwing = SC.lastSwing or 0
+									lastFiredSwing = store.swingCounter
 								end
 								SC.lastAttack = _getServerTime()
 								store.attackReach = (delta.Magnitude * 100) // 1 / 100
